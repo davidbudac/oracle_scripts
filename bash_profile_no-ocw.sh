@@ -6,7 +6,7 @@ if command -v rlwrap &> /dev/null; then
 fi
 
 alias sps='sqlplus / as sysdba'
-alias lsl='lsl -altr'
+alias lsl='ls -altr'
 alias listat='lsnrctl status'
 alias alog='tail -f -n 100 $al'
 
