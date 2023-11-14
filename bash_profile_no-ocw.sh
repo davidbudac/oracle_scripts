@@ -25,15 +25,18 @@ function get_oracle_db_unique_name {
 
             # and set path to alertlog:
             export ald="$ORACLE_BASE/diag/rdbms/$ORACLE_DB_UNIQUE_NAME/$ORACLE_SID/trace"
-            export al="$ald/alert_$ORACLE_SID.log"
-
-            # and other paths:
-            export tnsnames=$ORACLE_HOME/network/admin/tnsnames.ora
-            export sqlnet=$ORACLE_HOME/network/admin/sqlnet.ora
             
         else
-            echo "Error: Unable to extract DB_UNIQUE_NAME from SPFILE."
+            echo "Unable to extract DB_UNIQUE_NAME from SPFILE."
+            export ald="$ORACLE_BASE/diag/rdbms/$ORACLE_SID/$ORACLE_SID/trace"
+            
         fi
+        
+        export al="$ald/alert_$ORACLE_SID.log"
+        # and other paths:
+        export tnsnames=$ORACLE_HOME/network/admin/tnsnames.ora
+        export sqlnet=$ORACLE_HOME/network/admin/sqlnet.ora
+            
     else
         echo "Error: SPFILE not found at $ORACLE_SPFILE_PATH"
     fi
