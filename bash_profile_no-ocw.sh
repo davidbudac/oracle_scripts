@@ -31,15 +31,16 @@ function get_oracle_db_unique_name {
             export ald="$ORACLE_BASE/diag/rdbms/$ORACLE_SID/$ORACLE_SID/trace"
             
         fi
-        
-        export al="$ald/alert_$ORACLE_SID.log"
-        # and other paths:
-        export tnsnames=$ORACLE_HOME/network/admin/tnsnames.ora
-        export sqlnet=$ORACLE_HOME/network/admin/sqlnet.ora
-            
+                    
     else
-        echo "Error: SPFILE not found at $ORACLE_SPFILE_PATH"
+        echo "SPFILE not found at $ORACLE_SPFILE_PATH"
     fi
+
+    export al="$ald/alert_$ORACLE_SID.log"
+    # and other paths:
+    export tnsnames=$ORACLE_HOME/network/admin/tnsnames.ora
+    export sqlnet=$ORACLE_HOME/network/admin/sqlnet.ora
+
 }
 
 # oraenv, ignore all the commented lines and blank lines
