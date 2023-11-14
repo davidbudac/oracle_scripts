@@ -34,6 +34,7 @@ function get_oracle_db_unique_name {
                     
     else
         echo "SPFILE not found at $ORACLE_SPFILE_PATH"
+        export ald="$ORACLE_BASE/diag/rdbms/$ORACLE_SID/$ORACLE_SID/trace"        
     fi
 
     export al="$ald/alert_$ORACLE_SID.log"
