@@ -8,42 +8,38 @@ fi
 alias sps='sqlplus / as sysdba'
 alias lsl='ls -altr'
 alias listat='lsnrctl status'
-alias alog='tail -f -n 100 $al'
 
-# silly attempt to extract unique name from the spfile
-# and set path to alertlog
-function get_oracle_db_unique_name {
-    ORACLE_SPFILE_PATH="$ORACLE_HOME/dbs/spfile$ORACLE_SID.ora"
-
-    # Check if the SPFILE exists
-    if [ -f "$ORACLE_SPFILE_PATH" ]; then
-        # Attempt to extract db_unique_name from spfile
-        ORACLE_DB_UNIQUE_NAME=$(strings $ORACLE_SPFILE_PATH | grep "\*\.db_unique_name" | grep -o -P "'.*?'" | sed "s/'//g")
-        # Check if db_unique_name was found
-        if [ -n "$ORACLE_DB_UNIQUE_NAME" ]; then
-            echo "\$ORACLE_DB_UNIQUE_NAME set to: $ORACLE_DB_UNIQUE_NAME"
-
-            # and set path to alertlog:
-            export ald="$ORACLE_BASE/diag/rdbms/$ORACLE_DB_UNIQUE_NAME/$ORACLE_SID/trace"
-            
-        else
-            echo "Unable to extract DB_UNIQUE_NAME from SPFILE."
-            export ald="$ORACLE_BASE/diag/rdbms/$ORACLE_SID/$ORACLE_SID/trace"
-            
-        fi
-                    
-    else
-        echo "SPFILE not found at $ORACLE_SPFILE_PATH"
-        export ald="$ORACLE_BASE/diag/rdbms/$ORACLE_SID/$ORACLE_SID/trace"        
-    fi
-
-    export al="$ald/alert_$ORACLE_SID.log"
-    # and other paths:
+function set_log_path_variables() {
+  # set path to alertlog
+  # thanks to Maxim Demenko for this awesome idea (https://github.com/Maxim4711)
+  export al=$(echo $(adrci exec="set home  $ORACLE_SID; show base;"|awk -F '"' '{print $2}')"/"$(adrci exec="set home  $ORACLE_SID;show tracefile alert%log")|tr -d " ")
+  
+  
+  # crs log
+  export crsl=$(echo $(adrci exec="set home crs; show base;"|awk -F '"' '{print $2}')"/"$(adrci exec="set home crs;show tracefile alert%log")|tr -d " ")
+  
+  # and other paths:
+  if [ -f $ORACLE_HOME/network/admin/tnsnames.ora ]; then
     export tnsnames=$ORACLE_HOME/network/admin/tnsnames.ora
+  fi
+  
+  if [ -f $ORACLE_HOME/network/admin/sqlnet.ora ]; then
     export sqlnet=$ORACLE_HOME/network/admin/sqlnet.ora
-
+  fi
 }
+
+alias alog='tail -f -n 100 $al'
+alias crslog='tail -f -n 100 $crsl'
 
 # oraenv, ignore all the commented lines and blank lines
 # then set the path to alert log
-alias oe='cat /etc/oratab | grep -vE "^(#|$)" ; . oraenv ; get_oracle_db_unique_name'
+alias oe='cat /etc/oratab | grep -vE "^(#|$)" ; . oraenv ; set_log_path_variables'
+
+# prompt
+# https://scriptim.github.io/bash-prompt-generator/
+# for production - highlight SID in red
+if [[ $ORACLE_SID =~ ^prod ]]; then
+        PS1='\[\e[0m\][\[\e[0m\]\u\[\e[0m\]@\[\e[0m\]\h\[\e[0m\]/\[\e[0;1;4;41m\]$(echo $ORACLE_SID)\[\e[0m\] \w\[\e[0m\]]\[\e[0m\]# \[\e[0m\]'
+else
+        PS1='\[\e[0m\][\[\e[0m\]\u\[\e[0m\]@\[\e[0m\]\h\[\e[0m\]/\[\e[0;1m\]$(echo $ORACLE_SID) \[\e[0m\]\w\[\e[0m\]]\[\e[0m\]# \[\e[0m\]'
+fi
