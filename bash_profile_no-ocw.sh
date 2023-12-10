@@ -9,6 +9,7 @@ alias sps='sqlplus / as sysdba'
 alias lsl='ls -altr'
 alias listat='lsnrctl status'
 
+# this function is called after oraenv to set some paths into variables
 function set_log_path_variables() {
   # set path to alertlog
   # thanks to Maxim Demenko for this awesome idea (https://github.com/Maxim4711)
@@ -28,12 +29,12 @@ function set_log_path_variables() {
   fi
 }
 
-alias alog='tail -f -n 100 $al'
-alias crslog='tail -f -n 100 $crsl'
-
 # oraenv, ignore all the commented lines and blank lines
 # then set the path to alert log
 alias oe='cat /etc/oratab | grep -vE "^(#|$)" ; . oraenv ; set_log_path_variables'
+
+alias alog='tail -f -n 100 $al'
+alias crslog='tail -f -n 100 $crsl'
 
 # prompt
 # https://scriptim.github.io/bash-prompt-generator/
