@@ -3,6 +3,7 @@ if command -v rlwrap &> /dev/null; then
   alias sqlplus='rlwrap sqlplus'
   alias rman='rlwrap rman'
   alias dgmgrl='rlwrap dgmgrl'
+  alias asmcmd='rlwrap asmcmd'
 fi
 
 alias sps='sqlplus / as sysdba'
@@ -14,8 +15,7 @@ function set_log_path_variables() {
   # set path to alertlog
   # thanks to Maxim Demenko for this awesome idea (https://github.com/Maxim4711)
   export al=$(echo $(adrci exec="set home  $ORACLE_SID; show base;"|awk -F '"' '{print $2}')"/"$(adrci exec="set home  $ORACLE_SID;show tracefile alert%log")|tr -d " ")
-  
-  
+    
   # crs log
   export crsl=$(echo $(adrci exec="set home crs; show base;"|awk -F '"' '{print $2}')"/"$(adrci exec="set home crs;show tracefile alert%log")|tr -d " ")
   
@@ -44,3 +44,9 @@ if [[ $ORACLE_SID =~ ^prod ]]; then
 else
         PS1='\[\e[0m\][\[\e[0m\]\u\[\e[0m\]@\[\e[0m\]\h\[\e[0m\]/\[\e[0;1m\]$(echo $ORACLE_SID) \[\e[0m\]\w\[\e[0m\]]\[\e[0m\]# \[\e[0m\]'
 fi
+
+
+
+export al=$(
+  echo $(
+    adrci exec="set home  $ORACLE_SID; show base;"|awk -F '"' '{print $2}')"/"$(adrci exec="set home  $ORACLE_SID;show tracefile alert%log")|tr -d " ")
