@@ -6,7 +6,9 @@ if command -v rlwrap &> /dev/null; then
   alias asmcmd='rlwrap asmcmd'
 fi
 
-alias sps='sqlplus / as sysdba'
+# if it's an ASM instance, use SYSASM
+alias sps='[[ $ORACLE_SID == *"+"* ]] && sqlplus / as sysasm || sqlplus / as sysdba'
+
 alias lsl='ls -altr'
 alias listat='lsnrctl status'
 
