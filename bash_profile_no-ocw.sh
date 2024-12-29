@@ -52,3 +52,6 @@ fi
 export al=$(
   echo $(
     adrci exec="set home  $ORACLE_SID; show base;"|awk -F '"' '{print $2}')"/"$(adrci exec="set home  $ORACLE_SID;show tracefile alert%log")|tr -d " ")
+
+alias bat='batcat'
+alias lslf="fzf --preview 'bat --color=always {}'"
