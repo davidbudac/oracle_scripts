@@ -16,7 +16,7 @@ alias listat='lsnrctl status'
 function set_log_path_variables() {
   # set path to alertlog
   # thanks to Maxim Demenko for this awesome idea (https://github.com/Maxim4711)
-  export al=$(echo $(adrci exec="set home  $ORACLE_SID; show base;"|awk -F '"' '{print $2}')"/"$(adrci exec="set home  $ORACLE_SID;show tracefile alert%log")|tr -d " ")
+  export al=$(echo $(adrci exec="set home  $ORACLE_SID; show base;"|awk -F '"' '{print $2}')"/"$(adrci exec="set home rdbms/$ORACLE_SID;show tracefile alert%log")|tr -d " ")
     
   # crs log
   export crsl=$(echo $(adrci exec="set home crs; show base;"|awk -F '"' '{print $2}')"/"$(adrci exec="set home crs;show tracefile alert%log")|tr -d " ")
