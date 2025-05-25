@@ -1,0 +1,117 @@
+---
+- name: Prepare Inventory and Host Information
+  hosts: localhost
+  gather_facts: false
+  vars_prompt:
+    - name: inventory_file
+      prompt: "Enter the path to your inventory file (e.g., inventory.ini)"
+      default: "inventory.ini"
+      private: false
+    - name: new_host_alias
+      prompt: "Enter a unique alias for the new host (e.g., webserver01)"
+      private: false
+    - name: new_hostname
+      prompt: "Enter the hostname or IP address of the new host"
+      private: false
+    - name: ssh_port
+      prompt: "Enter the SSH port for the new host"
+      default: 22
+      private: false
+    - name: remote_user
+      prompt: "Enter the username on the new host"
+      private: false
+    - name: local_ssh_key_path
+      prompt: "Enter the path to your local public SSH key file"
+      default: "{{ lookup('env', 'HOME') }}/.ssh/id_rsa.pub"
+      private: false
+
+  tasks:
+    - name: Display provided SSH key path for confirmation
+      ansible.builtin.debug:
+        msg: "Will use local public SSH key from: {{ local_ssh_key_path }}"
+
+    - name: Ensure inventory file exists
+      ansible.builtin.file:
+        path: "{{ inventory_file }}"
+        state: touch
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: Check if host alias already exists in inventory
+      ansible.builtin.command: "grep -q '^{{ new_host_alias }}\\s' {{ inventory_file }}"
+      register: host_exists_check
+      failed_when: false
+      changed_when: false
+      delegate_to: localhost
+
+    - name: Add new host to inventory file if it does not exist
+      ansible.builtin.lineinfile:
+        path: "{{ inventory_file }}"
+        line: "{{ new_host_alias }} ansible_host={{ new_hostname }} ansible_port={{ ssh_port }} ansible_user={{ remote_user }}"
+        create: true
+        insertafter: EOF
+      when: host_exists_check.rc != 0
+      delegate_to: localhost
+      notify: Inventory updated message
+
+    - name: Inform if host already exists in inventory file
+      ansible.builtin.debug:
+        msg: "Host alias '{{ new_host_alias }}' already exists in {{ inventory_file }}. Skipping addition to file."
+      when: host_exists_check.rc == 0
+
+    - name: Add host to in-memory inventory for this Ansible run
+      ansible.builtin.add_host:
+        name: "{{ new_host_alias }}"
+        ansible_host: "{{ new_hostname }}"
+        ansible_port: "{{ ssh_port }}"
+        ansible_user: "{{ remote_user }}"
+        groups: "newly_added_hosts_group"
+
+    - name: Store SSH key path as a fact on localhost
+      ansible.builtin.set_fact:
+        forwarded_local_ssh_key_path: "{{ local_ssh_key_path }}"
+
+  handlers:
+    - name: Inventory updated message
+      ansible.builtin.debug:
+        msg: "Inventory file '{{ inventory_file }}' has been updated with host '{{ new_host_alias }}'."
+
+- name: Configure New Host
+  hosts: newly_added_hosts_group
+  gather_facts: false # Set to true if modules used below require facts beyond ansible_user
+  # The 'ansible_user', 'ansible_host', 'ansible_port' are inherited from the 'add_host' task.
+  vars:
+    source_profile_script_on_control_node: "/home/db/oracle_scripts/bash_profile_no-ocw.sh"
+    target_profile_script_name: "bash_profile_no-ocw.sh" # Name of the script on the target
+
+  tasks:
+    - name: Copy public SSH key to remote host for user '{{ ansible_user }}'
+      ansible.posix.authorized_key:
+        user: "{{ ansible_user }}"
+        key: "{{ lookup('file', hostvars['localhost']['forwarded_local_ssh_key_path']) }}"
+        state: present
+        manage_dir: true
+
+    - name: "Copy {{ source_profile_script_on_control_node }} to {{ ansible_user }}'s home directory on target"
+      ansible.builtin.copy:
+        src: "{{ source_profile_script_on_control_node }}" # Path on Ansible control node
+        dest: "~/{{ target_profile_script_name }}"         # Path on target (e.g., /home/remote_user/bash_profile_no-ocw.sh)
+        owner: "{{ ansible_user }}"
+        # group: "{{ ansible_user }}" # Often the user's primary group, adjust if needed
+        mode: '0644' # Readable by owner, readable by group/others. Adjust if it needs to be executable.
+      # This task will fail if the source_profile_script_on_control_node does not exist on the control machine.
+
+    - name: "Append content of {{ target_profile_script_name }} to {{ ansible_user }}'s .bash_profile"
+      ansible.builtin.blockinfile:
+        path: "~/.bash_profile"  # Path to .bash_profile in the remote user's home directory
+        block: |
+          # Content from {{ source_profile_script_on_control_node }}
+          {{ lookup('file', source_profile_script_on_control_node) }}
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - {{ target_profile_script_name }} content"
+        create: true             # Create .bash_profile if it doesn't exist
+        owner: "{{ ansible_user }}"
+        # group: "{{ ansible_user }}"
+        mode: '0644'             # Standard permissions for .bash_profile
+      # This ensures the content is added idempotently.
+      # lookup('file', ...) reads the file from the Ansible control node.
+
